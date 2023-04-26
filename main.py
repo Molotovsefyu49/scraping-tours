@@ -1,6 +1,7 @@
 import requests
 import selectorlib
 import smtplib, ssl
+from dotenv import load_dotenv
 import os
 import time
 import sqlite3
@@ -12,6 +13,8 @@ HEADERS = {
 
 connection = sqlite3.connect("data.db")
 
+
+# Define the scraping function get information from url
 def scrape(url):
     """Scrape the page source from the URL"""
     response = requests.get(url, headers=HEADERS)
@@ -19,20 +22,23 @@ def scrape(url):
     return source
 
 
+# Extract the information from the source variable  and return the desire value
 def extract(source):
     extractor = selectorlib.Extractor.from_yaml_file("extract.yaml")
     value = extractor.extract(source)["tours"]
     return value
 
 
+# send email function
 def send_email(message):
+    load_dotenv()
     host = "smtp.gmail.com"
     port = 465
 
-    username = "malicksender@gmail.com"
+    username = os.getenv("EMAIL")
     password = os.getenv("PASSWORD")
 
-    receiver = "malicksender@gmail.com"
+    receiver = os.getenv("EMAIL")
     context = ssl.create_default_context()
 
     with smtplib.SMTP_SSL(host, port, context=context) as server:
@@ -42,6 +48,7 @@ def send_email(message):
     print("Email was sent!")
 
 
+# it stores the extracted values into the database using SQLite
 def store(extracted):
     row = extracted.split(',')
     row = [item.strip() for item in row]
@@ -50,6 +57,7 @@ def store(extracted):
     connection.commit()
 
 
+# Query data from the database
 def read(extracted):
     row = extracted.split(',')
     row = [item.strip() for item in row]
@@ -61,6 +69,7 @@ def read(extracted):
     return rows
 
 
+# Main loop that keeps sending email each time there is a new tour
 if __name__ == "__main__":
     while True:
         scraped = scrape(URL)
